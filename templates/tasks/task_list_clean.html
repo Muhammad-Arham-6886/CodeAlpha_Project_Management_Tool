@@ -1,0 +1,454 @@
+{% extends 'base.html' %}
+
+{% block title %}Task Board - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 1.5rem;
+        min-height: 70vh;
+        overflow-x: auto;
+        padding-bottom: 2rem;
+    }
+    
+    .kanban-column {
+        flex: 1;
+        min-width: 320px;
+        background: #f8fafc;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .kanban-column.todo {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-top: 4px solid #64748b;
+    }
+    
+    .kanban-column.in-progress {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-top: 4px solid #3b82f6;
+    }
+    
+    .kanban-column.review {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-top: 4px solid #f59e0b;
+    }
+    
+    .kanban-column.completed {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-top: 4px solid #10b981;
+    }
+    
+    .kanban-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .kanban-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        color: #1f2937;
+    }
+    
+    .task-count {
+        background: rgba(255, 255, 255, 0.9);
+        color: #374151;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        min-width: 24px;
+        text-align: center;
+    }
+    
+    .task-list {
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .task-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .task-card.priority-high {
+        border-left-color: #ef4444;
+    }
+    
+    .task-card.priority-medium {
+        border-left-color: #f59e0b;
+    }
+    
+    .task-card.priority-low {
+        border-left-color: #10b981;
+    }
+    
+    .task-card.priority-urgent {
+        border-left-color: #dc2626;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    }
+    
+    .task-title {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .task-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+    }
+    
+    .task-assignee {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    
+    .task-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .task-action-btn {
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #6b7280;
+    }
+    
+    .task-action-btn:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .completion-toggle {
+        background: none;
+        border: 2px solid #d1d5db;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    
+    .completion-toggle.completed {
+        background: #10b981;
+        border-color: #10b981;
+    }
+    
+    .completion-toggle.completed::after {
+        content: '✓';
+        color: white;
+        font-size: 12px;
+        position: absolute;
+        top: -1px;
+        left: 3px;
+    }
+    
+    .task-card.completed {
+        opacity: 0.7;
+    }
+    
+    .task-card.completed .task-title {
+        text-decoration: line-through;
+        color: #6b7280;
+    }
+    
+    .priority-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    
+    .priority-urgent {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    
+    .priority-high {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+    
+    .priority-medium {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .priority-low {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .add-task-btn {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px dashed #d1d5db;
+        background: transparent;
+        border-radius: var(--border-radius);
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .add-task-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #f8fafc;
+    }
+    
+    .task-stats {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        flex: 1;
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius-lg);
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+{% csrf_token %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Task Board</h1>
+        <p class="text-muted">Manage your tasks across all projects</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Task
+        </a>
+        <a href="{% url 'tasks:my_tasks' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-user me-2"></i>My Tasks
+        </a>
+    </div>
+</div>
+
+<!-- Task Statistics -->
+<div class="task-stats">
+    <div class="stat-card">
+        <div class="stat-number">{{ task_stats.total }}</div>
+        <div class="stat-label">Total Tasks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ task_stats.todo }}</div>
+        <div class="stat-label">To Do</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ task_stats.in_progress }}</div>
+        <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ task_stats.review }}</div>
+        <div class="stat-label">Review</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ task_stats.completed }}</div>
+        <div class="stat-label">Completed</div>
+    </div>
+</div>
+
+<!-- Kanban Board -->
+<div class="kanban-board">
+    <!-- To Do Column -->
+    <div class="kanban-column todo">
+        <div class="kanban-header">
+            <h3 class="kanban-title">📋 To Do</h3>
+            <span class="task-count">{{ task_stats.todo }}</span>
+        </div>
+        <div class="task-list" id="todo-list">
+            {% for task in task_columns.todo %}
+                {% include 'tasks/task_card.html' with task=task %}
+            {% empty %}
+                <p class="text-muted text-center py-3">No tasks in this column</p>
+            {% endfor %}
+        </div>
+        <button class="add-task-btn" onclick="showCreateTaskModal('todo')">
+            <i class="fas fa-plus me-2"></i>Add Task
+        </button>
+    </div>
+
+    <!-- In Progress Column -->
+    <div class="kanban-column in-progress">
+        <div class="kanban-header">
+            <h3 class="kanban-title">🚀 In Progress</h3>
+            <span class="task-count">{{ task_stats.in_progress }}</span>
+        </div>
+        <div class="task-list" id="in-progress-list">
+            {% for task in task_columns.in_progress %}
+                {% include 'tasks/task_card.html' with task=task %}
+            {% empty %}
+                <p class="text-muted text-center py-3">No tasks in this column</p>
+            {% endfor %}
+        </div>
+        <button class="add-task-btn" onclick="showCreateTaskModal('in_progress')">
+            <i class="fas fa-plus me-2"></i>Add Task
+        </button>
+    </div>
+
+    <!-- Review Column -->
+    <div class="kanban-column review">
+        <div class="kanban-header">
+            <h3 class="kanban-title">👀 Review</h3>
+            <span class="task-count">{{ task_stats.review }}</span>
+        </div>
+        <div class="task-list" id="review-list">
+            {% for task in task_columns.review %}
+                {% include 'tasks/task_card.html' with task=task %}
+            {% empty %}
+                <p class="text-muted text-center py-3">No tasks in this column</p>
+            {% endfor %}
+        </div>
+        <button class="add-task-btn" onclick="showCreateTaskModal('review')">
+            <i class="fas fa-plus me-2"></i>Add Task
+        </button>
+    </div>
+
+    <!-- Completed Column -->
+    <div class="kanban-column completed">
+        <div class="kanban-header">
+            <h3 class="kanban-title">✅ Completed</h3>
+            <span class="task-count">{{ task_stats.completed }}</span>
+        </div>
+        <div class="task-list" id="completed-list">
+            {% for task in task_columns.completed %}
+                {% include 'tasks/task_card.html' with task=task %}
+            {% empty %}
+                <p class="text-muted text-center py-3">No completed tasks</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Task completion toggle
+function toggleTaskCompletion(taskId) {
+    fetch(`/tasks/${taskId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task.');
+    });
+}
+
+// Status update function
+function updateTaskStatus(taskId, newStatus) {
+    fetch(`/tasks/${taskId}/status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task status.');
+    });
+}
+
+// Create task modal
+function showCreateTaskModal(status = 'todo') {
+    window.location.href = `/tasks/create/?status=${status}`;
+}
+
+// Task drag and drop functionality
+let draggedTask = null;
+
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev, taskId) {
+    draggedTask = taskId;
+    ev.dataTransfer.setData("text", taskId);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    const taskId = ev.dataTransfer.getData("text");
+    const newStatus = ev.currentTarget.classList.contains('todo') ? 'todo' :
+                     ev.currentTarget.classList.contains('in-progress') ? 'in_progress' :
+                     ev.currentTarget.classList.contains('review') ? 'review' : 'completed';
+    
+    if (taskId && newStatus) {
+        updateTaskStatus(taskId, newStatus);
+    }
+}
+</script>
+{% endblock %}

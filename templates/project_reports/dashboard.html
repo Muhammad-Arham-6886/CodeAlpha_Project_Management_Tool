@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports & Analytics - ProjectFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
+        </h2>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="exportReports()">
+                <i class="fas fa-download me-2"></i>Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <div class="metric-content">
+                    <h3 class="metric-number">{{ stats.total_projects }}</h3>
+                    <p class="metric-label">Total Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="metric-content">
+                    <h3 class="metric-number">{{ stats.total_tasks }}</h3>
+                    <p class="metric-label">Total Tasks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <h3 class="metric-number">{{ stats.project_completion_rate|floatformat:1 }}%</h3>
+                    <p class="metric-label">Project Completion</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="metric-content">
+                    <h3 class="metric-number">{{ stats.overdue_tasks }}</h3>
+                    <p class="metric-label">Overdue Tasks</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Project Status Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectStatusChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Task Priority Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="taskPriorityChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Statistics -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Project Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stat-row">
+                        <span class="stat-label">Active Projects:</span>
+                        <span class="stat-value">{{ stats.active_projects }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Completed Projects:</span>
+                        <span class="stat-value">{{ stats.completed_projects }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">New Projects (30 days):</span>
+                        <span class="stat-value">{{ recent_projects }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Completion Rate:</span>
+                        <span class="stat-value">{{ stats.project_completion_rate|floatformat:1 }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Task Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stat-row">
+                        <span class="stat-label">Completed Tasks:</span>
+                        <span class="stat-value">{{ stats.completed_tasks }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Overdue Tasks:</span>
+                        <span class="stat-value text-danger">{{ stats.overdue_tasks }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">New Tasks (30 days):</span>
+                        <span class="stat-value">{{ recent_tasks }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Completion Rate:</span>
+                        <span class="stat-value">{{ stats.task_completion_rate|floatformat:1 }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-right: 1rem;
+    opacity: 0.8;
+}
+
+.metric-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.metric-content p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #495057;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Project Status Chart
+const projectStatusCtx = document.getElementById('projectStatusChart').getContext('2d');
+const projectStatusData = {{ project_status_data|safe }};
+
+const projectStatusChart = new Chart(projectStatusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: projectStatusData.map(item => item.status.charAt(0).toUpperCase() + item.status.slice(1)),
+        datasets: [{
+            data: projectStatusData.map(item => item.count),
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#FF9F40'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Task Priority Chart
+const taskPriorityCtx = document.getElementById('taskPriorityChart').getContext('2d');
+const taskPriorityData = {{ task_priority_data|safe }};
+
+const taskPriorityChart = new Chart(taskPriorityCtx, {
+    type: 'bar',
+    data: {
+        labels: taskPriorityData.map(item => item.priority.charAt(0).toUpperCase() + item.priority.slice(1)),
+        datasets: [{
+            label: 'Number of Tasks',
+            data: taskPriorityData.map(item => item.count),
+            backgroundColor: [
+                '#dc3545', // Critical - Red
+                '#fd7e14', // High - Orange
+                '#ffc107', // Medium - Yellow
+                '#28a745'  // Low - Green
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+function exportReports() {
+    notificationManager.show('Report export functionality coming soon!', 'info');
+}
+
+// Animate numbers
+document.addEventListener('DOMContentLoaded', function() {
+    const numbers = document.querySelectorAll('.metric-number');
+    numbers.forEach(num => {
+        const target = parseFloat(num.textContent);
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            if (num.textContent.includes('%')) {
+                num.textContent = current.toFixed(1) + '%';
+            } else {
+                num.textContent = Math.floor(current);
+            }
+        }, 30);
+    });
+});
+</script>
+{% endblock %}

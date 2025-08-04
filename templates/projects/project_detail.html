@@ -1,0 +1,274 @@
+{% extends 'base.html        <div class="btn-group">
+            <a href="{% url 'projects:edit_project' project.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-2"></i>Edit Project
+            </a>
+            <a href="{% url 'tasks:project_tasks' project.id %}" class="btn btn-outline-success">
+                <i class="fas fa-tasks me-2"></i>View Tasks
+            </a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                <i class="fas fa-user-plus me-2"></i>Invite Member
+            </button>
+        </div>{% block title %}{{ project.name }} - ProjectFlow{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <!-- Project Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Projects</a></li>
+                    <li class="breadcrumb-item active">{{ project.name }}</li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="fas fa-project-diagram me-2" style="color: {{ project.color }}"></i>
+                {{ project.name }}
+                <span class="badge bg-{{ project.status }} ms-2">{{ project.get_status_display }}</span>
+            </h2>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'projects:edit_project' project.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-2"></i>Edit Project
+            </a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                <i class="fas fa-user-plus me-2"></i>Invite Team
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Project Info -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Project Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Owner:</strong> {{ project.owner.first_name }} {{ project.owner.last_name }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge bg-{{ project.status }}">{{ project.get_status_display }}</span>
+                            </p>
+                            <p><strong>Priority:</strong> 
+                                <span class="badge bg-{{ project.priority }}">{{ project.get_priority_display }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ project.created_at|date:"M d, Y" }}</p>
+                            <p><strong>Start Date:</strong> 
+                                {% if project.start_date %}{{ project.start_date|date:"M d, Y" }}{% else %}Not set{% endif %}
+                            </p>
+                            <p><strong>End Date:</strong> 
+                                {% if project.end_date %}{{ project.end_date|date:"M d, Y" }}{% else %}Not set{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% if project.description %}
+                    <div class="mt-3">
+                        <strong>Description:</strong>
+                        <p class="mt-2">{{ project.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Tasks -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Recent Tasks
+                    </h5>
+                    <a href="{% url 'tasks:project_tasks' project.id %}" class="btn btn-sm btn-outline-primary">
+                        View All Tasks
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if project.tasks.exists %}
+                        <div class="list-group list-group-flush">
+                            {% for task in project.tasks.all|slice:":5" %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="{% if task.status == 'completed' %}text-decoration-line-through text-muted{% endif %}">
+                                            {{ task.title }}
+                                        </strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            <span class="badge bg-{{ task.priority }} text-white me-1">{{ task.get_priority_display }}</span>
+                                            <span class="badge bg-secondary">{{ task.get_status_display }}</span>
+                                            {% if task.due_date %}
+                                                - Due: {{ task.due_date|date:"M d" }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No tasks yet. <a href="{% url 'tasks:create_task' %}?project={{ project.id }}">Create the first task</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Team & Stats -->
+        <div class="col-lg-4">
+            <!-- Team Members -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Team Members ({{ memberships.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for membership in memberships %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar me-3">
+                            {% if membership.user.first_name %}
+                                {{ membership.user.first_name|first }}{{ membership.user.last_name|first }}
+                            {% else %}
+                                {{ membership.user.username|first|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">
+                                {% if membership.user.first_name %}
+                                    {{ membership.user.first_name }} {{ membership.user.last_name }}
+                                {% else %}
+                                    {{ membership.user.username }}
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ membership.user.email }}</small>
+                        </div>
+                        <span class="badge bg-{{ membership.role }}">{{ membership.get_role_display }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">No team members yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Project Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Project Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Tasks:</span>
+                        <span class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Completed:</span>
+                        <span class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">In Progress:</span>
+                        <span class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Team Size:</span>
+                        <span class="stat-value">{{ memberships.count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invite Team Modal -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Invite Team Member
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
+                        {{ form.role }}
+                        {% if form.role.errors %}
+                            <div class="text-danger small">{{ form.role.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Send Invitation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #495057;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show any messages from the backend
+{% if messages %}
+    {% for message in messages %}
+        setTimeout(() => {
+            notificationManager.show('{{ message }}', '{{ message.tags }}');
+        }, 500);
+    {% endfor %}
+{% endif %}
+</script>
+{% endblock %}

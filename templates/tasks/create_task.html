@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Task - ProjectFlow{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-plus me-2"></i>Create New Task
+                        </h4>
+                        <div class="progress-indicator">
+                            <span class="text-white-50 small">Step 1 of 1</span>
+                        </div>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-light" role="progressbar" style="width: 100%" 
+                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="createTaskForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">
+                                        <i class="fas fa-tasks me-1"></i>Task Title <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="title" name="title" 
+                                           placeholder="Enter task title..." required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Priority
+                                    </label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        <option value="low">🟢 Low</option>
+                                        <option value="medium" selected>🟡 Medium</option>
+                                        <option value="high">🟠 High</option>
+                                        <option value="urgent">🔴 Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project" class="form-label">
+                                        <i class="fas fa-folder me-1"></i>Project <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="project" name="project" required>
+                                        <option value="">Select a project</option>
+                                        {% for project in projects %}
+                                            <option value="{{ project.id }}" 
+                                                    data-color="{{ project.color|default:'#667eea' }}">
+                                                {{ project.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Choose which project this task belongs to</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="due_date" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>Due Date
+                                    </label>
+                                    <input type="date" class="form-control" id="due_date" name="due_date">
+                                    <div class="form-text">When should this task be completed?</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="4" 
+                                      placeholder="Describe what needs to be done..."></textarea>
+                            <div class="form-text">Provide details about the task requirements</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="assigned_to" class="form-label">
+                                <i class="fas fa-users me-1"></i>Assign To
+                            </label>
+                            <select class="form-select" id="assigned_to" name="assigned_to" multiple size="4">
+                                <option value="">Select team members...</option>
+                                {% for member in project_members %}
+                                    <option value="{{ member.id }}" 
+                                            {% if member == user %}selected{% endif %}>
+                                        {{ member.get_full_name|default:member.username }}
+                                        {% if member == user %} (You){% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple users. You are automatically selected.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary" onclick="clearForm()">
+                                    <i class="fas fa-undo me-2"></i>Reset
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Create Task
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation and user experience improvements
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createTaskForm');
+    const projectSelect = document.getElementById('project');
+    const assignedToSelect = document.getElementById('assigned_to');
+    
+    // Set status from URL parameter if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    if (status) {
+        const statusInput = document.createElement('input');
+        statusInput.type = 'hidden';
+        statusInput.name = 'status';
+        statusInput.value = status;
+        form.appendChild(statusInput);
+    }
+    
+    // Load project members when project is selected
+    projectSelect.addEventListener('change', function() {
+        const projectId = this.value;
+        
+        // Clear existing options
+        assignedToSelect.innerHTML = '';
+        
+        if (projectId) {
+            // Show loading state
+            assignedToSelect.innerHTML = '<option disabled>Loading team members...</option>';
+            
+            // Fetch project members from API
+            fetch(`/tasks/api/project/${projectId}/members/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load project members');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Clear loading state
+                    assignedToSelect.innerHTML = '';
+                    
+                    // Add option to select all or none
+                    const selectAllOption = document.createElement('option');
+                    selectAllOption.value = '';
+                    selectAllOption.textContent = 'Select team members...';
+                    assignedToSelect.appendChild(selectAllOption);
+                    
+                    // Add members
+                    data.members.forEach(member => {
+                        const option = document.createElement('option');
+                        option.value = member.id;
+                        option.textContent = member.name;
+                        if (member.is_owner) {
+                            option.textContent += ' (Owner)';
+                        }
+                        if (member.id == {{ user.id }}) {
+                            option.textContent += ' (You)';
+                            option.selected = true; // Auto-select current user
+                        }
+                        assignedToSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading project members:', error);
+                    assignedToSelect.innerHTML = '<option disabled>Error loading team members</option>';
+                });
+        } else {
+            assignedToSelect.innerHTML = '<option disabled>Select a project first to see team members</option>';
+        }
+    });
+    
+    // Form submission with loading state
+    form.addEventListener('submit', function(e) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Task...';
+        submitBtn.disabled = true;
+    });
+});
+
+// Clear form function
+function clearForm() {
+    const form = document.getElementById('createTaskForm');
+    form.reset();
+    
+    // Re-select the current user in assigned_to
+    const assignedToSelect = document.getElementById('assigned_to');
+    const currentUserOption = assignedToSelect.querySelector('option[selected]');
+    if (currentUserOption) {
+        currentUserOption.selected = true;
+    }
+}
+
+// Priority indicator color change
+document.getElementById('priority').addEventListener('change', function() {
+    const priority = this.value;
+    const header = document.querySelector('.card-header');
+    
+    switch(priority) {
+        case 'urgent':
+            header.className = 'card-header bg-danger text-white';
+            break;
+        case 'high':
+            header.className = 'card-header bg-warning text-dark';
+            break;
+        case 'medium':
+            header.className = 'card-header bg-primary text-white';
+            break;
+        case 'low':
+            header.className = 'card-header bg-success text-white';
+            break;
+        default:
+            header.className = 'card-header bg-primary text-white';
+    }
+});
+</script>
+{% endblock %}

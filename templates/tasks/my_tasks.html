@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+
+{% block title %}My Tasks - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius-lg);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .view-toggle {
+        display: flex;
+        background: #f1f5f9;
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+    }
+    
+    .view-toggle button {
+        flex: 1;
+        background: none;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .view-toggle button.active {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .task-list-view .task-item {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+    
+    .task-list-view .task-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .task-list-view .task-item.priority-high {
+        border-left-color: #ef4444;
+    }
+    
+    .task-list-view .task-item.priority-medium {
+        border-left-color: #f59e0b;
+    }
+    
+    .task-list-view .task-item.priority-low {
+        border-left-color: #10b981;
+    }
+    
+    .task-list-view .task-item.priority-urgent {
+        border-left-color: #dc2626;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    }
+    
+    .task-list-view .task-item.completed {
+        opacity: 0.6;
+    }
+    
+    .task-list-view .task-item.completed .task-title {
+        text-decoration: line-through;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">My Tasks</h1>
+            <p class="text-muted">Tasks assigned to you across all projects</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Task
+            </a>
+            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-columns me-2"></i>Board View
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="task-filters">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('kanban')">
+                        <i class="fas fa-columns me-1"></i>Board
+                    </button>
+                    <button onclick="switchView('list')">
+                        <i class="fas fa-list me-1"></i>List
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-10">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="search" 
+                               placeholder="Search tasks..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+                            <option value="">All Status</option>
+                            <option value="todo" {% if status_filter == 'todo' %}selected{% endif %}>To Do</option>
+                            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="review" {% if status_filter == 'review' %}selected{% endif %}>Review</option>
+                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="priority">
+                            <option value="">All Priority</option>
+                            <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Urgent</option>
+                            <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
+                            <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="project">
+                            <option value="">All Projects</option>
+                            {% for project in projects %}
+                                <option value="{{ project.id }}" {% if project_filter == project.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ project.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban View -->
+    <div id="kanban-view">
+        <div class="kanban-board">
+            <!-- To Do Column -->
+            <div class="kanban-column todo">
+                <div class="kanban-header">
+                    <h3 class="kanban-title">📋 To Do</h3>
+                    <span class="task-count">{{ task_columns.todo.count }}</span>
+                </div>
+                <div class="task-list">
+                    {% for task in task_columns.todo %}
+                        {% include 'tasks/task_card.html' with task=task %}
+                    {% empty %}
+                        <p class="text-muted text-center py-3">No tasks in this column</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- In Progress Column -->
+            <div class="kanban-column in-progress">
+                <div class="kanban-header">
+                    <h3 class="kanban-title">🚀 In Progress</h3>
+                    <span class="task-count">{{ task_columns.in_progress.count }}</span>
+                </div>
+                <div class="task-list">
+                    {% for task in task_columns.in_progress %}
+                        {% include 'tasks/task_card.html' with task=task %}
+                    {% empty %}
+                        <p class="text-muted text-center py-3">No tasks in this column</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Review Column -->
+            <div class="kanban-column review">
+                <div class="kanban-header">
+                    <h3 class="kanban-title">👀 Review</h3>
+                    <span class="task-count">{{ task_columns.review.count }}</span>
+                </div>
+                <div class="task-list">
+                    {% for task in task_columns.review %}
+                        {% include 'tasks/task_card.html' with task=task %}
+                    {% empty %}
+                        <p class="text-muted text-center py-3">No tasks in this column</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Completed Column -->
+            <div class="kanban-column completed">
+                <div class="kanban-header">
+                    <h3 class="kanban-title">✅ Completed</h3>
+                    <span class="task-count">{{ task_columns.completed.count }}</span>
+                </div>
+                <div class="task-list">
+                    {% for task in task_columns.completed %}
+                        {% include 'tasks/task_card.html' with task=task %}
+                    {% empty %}
+                        <p class="text-muted text-center py-3">No completed tasks</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="list-view" style="display: none;">
+        <div class="task-list-view">
+            {% for task in my_tasks %}
+                <div class="task-item priority-{{ task.priority }} {% if task.status == 'completed' %}completed{% endif %}"
+                     onclick="window.location.href='{% url 'tasks:task_detail' task.id %}'">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <button class="completion-toggle me-3 {% if task.status == 'completed' %}completed{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                                        title="{% if task.status == 'completed' %}Reopen task{% else %}Mark as completed{% endif %}">
+                                </button>
+                                <h5 class="task-title mb-0">{{ task.title }}</h5>
+                                <span class="priority-badge priority-{{ task.priority }} ms-2">{{ task.get_priority_display }}</span>
+                                <span class="task-status-badge status-{{ task.status }} ms-2">{{ task.get_status_display }}</span>
+                            </div>
+                            
+                            {% if task.description %}
+                                <p class="text-muted mb-2">{{ task.description|truncatechars:150 }}</p>
+                            {% endif %}
+                            
+                            <div class="d-flex align-items-center gap-3 text-muted small">
+                                <span>
+                                    <i class="fas fa-folder me-1"></i>{{ task.project.name }}
+                                </span>
+                                {% if task.due_date %}
+                                    <span {% if task.is_overdue %}class="text-danger"{% endif %}>
+                                        <i class="fas fa-calendar me-1"></i>{{ task.due_date|date:"M d, Y" }}
+                                        {% if task.is_overdue %}<span class="ms-1">(Overdue)</span>{% endif %}
+                                    </span>
+                                {% endif %}
+                                {% if task.completed_date %}
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle me-1"></i>Completed {{ task.completed_date|date:"M d, Y" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="task-actions">
+                            <button class="task-action-btn" 
+                                    onclick="event.stopPropagation(); window.location.href='{% url 'tasks:edit_task' task.id %}'"
+                                    title="Edit task">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            
+                            {% if task.status != 'completed' %}
+                                <button class="task-action-btn"
+                                        onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                                        title="Mark as completed">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            {% else %}
+                                <button class="task-action-btn"
+                                        onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                                        title="Reopen task">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No tasks found</h4>
+                    <p class="text-muted">Try adjusting your filters or create a new task.</p>
+                    <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Your First Task
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if project_filter %}&project={{ project_filter }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if project_filter %}&project={{ project_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if project_filter %}&project={{ project_filter }}{% endif %}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Import CSS for kanban from task_list
+const kanbanStyles = `
+    .kanban-board {
+        display: flex;
+        gap: 1.5rem;
+        min-height: 50vh;
+        overflow-x: auto;
+        padding-bottom: 2rem;
+    }
+    
+    .kanban-column {
+        flex: 1;
+        min-width: 280px;
+        background: #f8fafc;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .kanban-column.todo {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-top: 4px solid #64748b;
+    }
+    
+    .kanban-column.in-progress {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-top: 4px solid #3b82f6;
+    }
+    
+    .kanban-column.review {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-top: 4px solid #f59e0b;
+    }
+    
+    .kanban-column.completed {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-top: 4px solid #10b981;
+    }
+    
+    .kanban-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .kanban-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        color: #1f2937;
+    }
+    
+    .task-count {
+        background: rgba(255, 255, 255, 0.9);
+        color: #374151;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        min-width: 24px;
+        text-align: center;
+    }
+`;
+
+// Add kanban styles
+const style = document.createElement('style');
+style.textContent = kanbanStyles;
+document.head.appendChild(style);
+
+// View switching
+function switchView(view) {
+    const kanbanView = document.getElementById('kanban-view');
+    const listView = document.getElementById('list-view');
+    const buttons = document.querySelectorAll('.view-toggle button');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (view === 'kanban') {
+        kanbanView.style.display = 'block';
+        listView.style.display = 'none';
+        buttons[0].classList.add('active');
+    } else {
+        kanbanView.style.display = 'none';
+        listView.style.display = 'block';
+        buttons[1].classList.add('active');
+    }
+}
+
+// Task completion toggle
+function toggleTaskCompletion(taskId) {
+    fetch(`/tasks/${taskId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task.');
+    });
+}
+</script>
+{% endblock %}

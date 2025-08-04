@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ project.name }} - Team Members{% endblock %}
+
+{% block extra_css %}
+<style>
+    .member-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+    
+    .member-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .member-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+    }
+    
+    .role-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .role-admin {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .role-manager {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .role-member {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    
+    .role-viewer {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .stats-section {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'projects:project_detail' project.id %}">{{ project.name }}</a></li>
+                    <li class="breadcrumb-item active">Team Members</li>
+                </ol>
+            </nav>
+            <h1 class="page-title">
+                <i class="fas fa-users me-2"></i>Team Members
+            </h1>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Project
+                </a>
+                <a href="{% url 'projects:project_board' project.id %}" class="btn btn-primary">
+                    <i class="fas fa-tasks me-2"></i>View Board
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Project Info -->
+    <div class="stats-section">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-2">{{ project.name }}</h3>
+                <p class="text-muted mb-0">{{ project.description }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex justify-content-md-end gap-4">
+                    <div class="text-center">
+                        <div class="h4 mb-0 text-primary">{{ memberships.count }}</div>
+                        <small class="text-muted">Member{{ memberships.count|pluralize }}</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="h4 mb-0 text-success">{{ project.tasks.count }}</div>
+                        <small class="text-muted">Task{{ project.tasks.count|pluralize }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Members Grid -->
+    <div class="row">
+        {% for membership in memberships %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="member-card text-center">
+                <div class="member-avatar">
+                    {{ membership.user.first_name|first|default:membership.user.username|first|upper }}{{ membership.user.last_name|first|upper }}
+                </div>
+                
+                <h5 class="mb-1">
+                    {{ membership.user.get_full_name|default:membership.user.username }}
+                    {% if membership.user == project.owner %}
+                        <i class="fas fa-crown text-warning ms-1" title="Project Owner"></i>
+                    {% endif %}
+                </h5>
+                
+                <p class="text-muted mb-2">{{ membership.user.email }}</p>
+                
+                <span class="role-badge role-{{ membership.role }}">
+                    {{ membership.get_role_display }}
+                </span>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Joined {{ membership.joined_at|date:"M d, Y" }}
+                    </small>
+                </div>
+                
+                {% if request.user == project.owner and membership.user != project.owner %}
+                <div class="mt-3">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="editMemberRole('{{ membership.id }}', '{{ membership.role }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="removeMember('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}')">
+                            <i class="fas fa-user-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No team members yet</h4>
+                <p class="text-muted">Invite team members to start collaborating on this project.</p>
+                <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Invite Members
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Member management functions
+function editMemberRole(membershipId, currentRole) {
+    // This would open a modal to edit member role
+    // For now, just show an alert
+    alert(`Edit role functionality for membership ${membershipId} (current: ${currentRole}) - Coming Soon!`);
+}
+
+function removeMember(membershipId, memberName) {
+    if (confirm(`Are you sure you want to remove ${memberName} from this project?`)) {
+        // This would make an AJAX call to remove the member
+        alert(`Remove member functionality for ${memberName} - Coming Soon!`);
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any initialization code here
+    console.log('Team members page loaded');
+});
+</script>
+{% endblock %}

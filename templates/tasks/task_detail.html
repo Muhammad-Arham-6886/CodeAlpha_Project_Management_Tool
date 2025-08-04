@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} - Task Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: var(--border-radius-lg);
+    }
+    
+    .task-status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+    
+    .status-todo {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .status-in_progress {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+    
+    .status-review {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .status-completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .priority-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    
+    .priority-low {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .priority-medium {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .priority-high {
+        background: #fecaca;
+        color: #dc2626;
+    }
+    
+    .priority-urgent {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .completion-toggle-large {
+        background: none;
+        border: 3px solid #d1d5db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        margin-right: 1rem;
+    }
+    
+    .completion-toggle-large.completed {
+        background: #10b981;
+        border-color: #10b981;
+    }
+    
+    .completion-toggle-large.completed::after {
+        content: '✓';
+        color: white;
+        font-size: 24px;
+        position: absolute;
+        top: 3px;
+        left: 10px;
+    }
+    
+    .activity-item {
+        border-left: 3px solid #e5e7eb;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .activity-item::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        background: #6b7280;
+        border-radius: 50%;
+        position: absolute;
+        left: -6.5px;
+        top: 0.5rem;
+    }
+    
+    .activity-item.created::before {
+        background: #10b981;
+    }
+    
+    .activity-item.status_changed::before {
+        background: #3b82f6;
+    }
+    
+    .activity-item.updated::before {
+        background: #f59e0b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- Task Header -->
+    <div class="task-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-3">
+                        <button class="completion-toggle-large {% if task.status == 'completed' %}completed{% endif %}" 
+                                onclick="toggleTaskCompletion('{{ task.id }}')"
+                                title="{% if task.status == 'completed' %}Reopen task{% else %}Mark as completed{% endif %}">
+                        </button>
+                        <div>
+                            <h1 class="h2 mb-2 {% if task.status == 'completed' %}text-decoration-line-through{% endif %}">
+                                {{ task.title }}
+                            </h1>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="task-status-badge status-{{ task.status }}">
+                                    {{ task.get_status_display }}
+                                </span>
+                                <span class="priority-badge priority-{{ task.priority }}">
+                                    {{ task.get_priority_display }} Priority
+                                </span>
+                                {% if task.completed_date %}
+                                    <span class="text-light">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Completed {{ task.completed_date|date:"M d, Y \a\t H:i" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Project:</strong> 
+                                <a href="{% url 'projects:project_detail' task.project.id %}" class="text-light">
+                                    {{ task.project.name }}
+                                </a>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Created by:</strong> {{ task.created_by.get_full_name|default:task.created_by.username }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Created:</strong> {{ task.created_at|date:"M d, Y \a\t H:i" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if task.assigned_to.exists %}
+                                <div class="mb-2">
+                                    <strong>Assigned to:</strong>
+                                    <div class="mt-1">
+                                        {% for assignee in task.assigned_to.all %}
+                                            <span class="badge bg-light text-dark me-1">
+                                                {{ assignee.get_full_name|default:assignee.username }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if task.due_date %}
+                                <div class="mb-2">
+                                    <strong>Due Date:</strong> 
+                                    <span {% if task.is_overdue %}class="text-warning"{% endif %}>
+                                        {{ task.due_date|date:"M d, Y \a\t H:i" }}
+                                        {% if task.is_overdue %}(Overdue){% endif %}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <a href="{% url 'tasks:edit_task' task.id %}" class="btn btn-light">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </a>
+                    <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Board
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Task Details -->
+        <div class="col-lg-8">
+            {% if task.description %}
+                <div class="action-card">
+                    <h5 class="mb-3">Description</h5>
+                    <div class="task-description">
+                        {{ task.description|linebreaks }}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="action-card">
+                <h5 class="mb-3">Quick Actions</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if task.status != 'completed' %}
+                        <button class="btn btn-success" onclick="toggleTaskCompletion('{{ task.id }}')">
+                            <i class="fas fa-check me-2"></i>Mark as Completed
+                        </button>
+                    {% else %}
+                        <button class="btn btn-warning" onclick="toggleTaskCompletion('{{ task.id }}')">
+                            <i class="fas fa-undo me-2"></i>Reopen Task
+                        </button>
+                    {% endif %}
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-exchange-alt me-2"></i>Change Status
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus('{{ task.id }}', 'todo')">
+                                <i class="fas fa-circle text-secondary me-2"></i>To Do
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus('{{ task.id }}', 'in_progress')">
+                                <i class="fas fa-circle text-primary me-2"></i>In Progress
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus('{{ task.id }}', 'review')">
+                                <i class="fas fa-circle text-warning me-2"></i>Review
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus('{{ task.id }}', 'completed')">
+                                <i class="fas fa-circle text-success me-2"></i>Completed
+                            </a></li>
+                        </ul>
+                    </div>
+                    
+                    <a href="{% url 'tasks:edit_task' task.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Task
+                    </a>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="action-card">
+                <h5 class="mb-3">Comments ({{ comments.count }})</h5>
+                
+                <!-- Add Comment Form -->
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Add a comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-comment me-2"></i>Add Comment
+                    </button>
+                </form>
+                
+                <!-- Comments List -->
+                {% for comment in comments %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong>{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                            <small class="text-muted">{{ comment.created_at|date:"M d, Y \a\t H:i" }}</small>
+                        </div>
+                        <p class="mb-0">{{ comment.content|linebreaks }}</p>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">No comments yet. Be the first to comment!</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Task Info -->
+            <div class="action-card">
+                <h5 class="mb-3">Task Information</h5>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label text-muted">Status</label>
+                        <div class="task-status-badge status-{{ task.status }}">
+                            {{ task.get_status_display }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted">Priority</label>
+                        <div class="priority-badge priority-{{ task.priority }}">
+                            {{ task.get_priority_display }}
+                        </div>
+                    </div>
+                    {% if task.estimated_hours %}
+                        <div class="col-6">
+                            <label class="form-label text-muted">Estimated</label>
+                            <div>{{ task.estimated_hours }}h</div>
+                        </div>
+                    {% endif %}
+                    {% if task.actual_hours %}
+                        <div class="col-6">
+                            <label class="form-label text-muted">Actual</label>
+                            <div>{{ task.actual_hours }}h</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="action-card">
+                <h5 class="mb-3">Activity Timeline</h5>
+                <div class="activity-timeline">
+                    {% for activity in activities %}
+                        <div class="activity-item {{ activity.activity_type }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ activity.user.get_full_name|default:activity.user.username }}</strong>
+                                    <span class="text-muted">{{ activity.get_activity_type_display|lower }}</span>
+                                    <div class="small text-muted mt-1">{{ activity.description }}</div>
+                                </div>
+                                <small class="text-muted">{{ activity.created_at|date:"M d, H:i" }}</small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">No activity recorded yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Task completion toggle
+function toggleTaskCompletion(taskId) {
+    fetch(`/tasks/${taskId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to update the UI
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task.');
+    });
+}
+
+// Status update function
+function updateTaskStatus(taskId, newStatus) {
+    fetch(`/tasks/${taskId}/status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to update the UI
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task status.');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Project - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-card {
+        max-width: 500px;
+        margin: 2rem auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid #fecaca;
+    }
+    
+    .delete-header {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px 12px 0 0;
+        text-align: center;
+    }
+    
+    .delete-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    
+    .delete-body {
+        padding: 2rem;
+    }
+    
+    .project-info {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .warning-list {
+        background: #fffbeb;
+        border: 1px solid #fed7aa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .btn-danger-confirm {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-danger-confirm:hover {
+        background: linear-gradient(135deg, #b91c1c, #991b1b);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <div class="delete-card">
+        <div class="delete-header">
+            <div class="delete-icon">
+                <i class="fas fa-exclamation-triangle fa-2x"></i>
+            </div>
+            <h2 class="mb-0">Delete Project</h2>
+            <p class="mb-0 opacity-90">This action cannot be undone</p>
+        </div>
+        
+        <div class="delete-body">
+            <div class="project-info">
+                <h5 class="text-danger mb-2">
+                    <i class="fas fa-project-diagram me-2"></i>{{ project.name }}
+                </h5>
+                <p class="text-muted mb-1">{{ project.description|truncatechars:100 }}</p>
+                <small class="text-muted">
+                    Created {{ project.created_at|date:"M d, Y" }} • 
+                    {{ project.tasks.count }} task{{ project.tasks.count|pluralize }} • 
+                    {{ project.members.count }} member{{ project.members.count|pluralize }}
+                </small>
+            </div>
+            
+            <div class="warning-list">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-exclamation-circle me-2"></i>What will be deleted:
+                </h6>
+                <ul class="mb-0 text-sm">
+                    <li>All project tasks and their data</li>
+                    <li>All project files and attachments</li>
+                    <li>Project member assignments</li>
+                    <li>Project activity history</li>
+                    <li>All related notifications</li>
+                </ul>
+            </div>
+            
+            <p class="text-center text-muted mb-3">
+                Are you absolutely sure you want to delete this project? This action cannot be undone.
+            </p>
+            
+            <form method="post" class="text-center">
+                {% csrf_token %}
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-secondary me-md-2">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger-confirm">
+                        <i class="fas fa-trash me-2"></i>Delete Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add confirmation on form submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const confirmed = confirm('Are you absolutely sure you want to delete "{{ project.name }}"? This action cannot be undone.');
+        if (!confirmed) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

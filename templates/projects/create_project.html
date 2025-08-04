@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Project - ProjectFlow{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Project
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="projectForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="id_name" class="form-label">
+                                        <i class="fas fa-project-diagram me-1"></i>Project Name *
+                                    </label>
+                                    <input type="text" 
+                                           name="name" 
+                                           class="form-control" 
+                                           placeholder="Enter project name..." 
+                                           maxlength="200" 
+                                           required 
+                                           id="id_name"
+                                           style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                    {% if form.name.errors %}
+                                        <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="id_color" class="form-label">
+                                        <i class="fas fa-palette me-1"></i>Project Color
+                                    </label>
+                                    <input type="color" 
+                                           name="color" 
+                                           class="form-control" 
+                                           id="id_color"
+                                           value="#667eea"
+                                           style="border: 2px solid #e5e7eb; padding: 12px 16px; height: 50px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            <textarea name="description" 
+                                      class="form-control" 
+                                      rows="4" 
+                                      placeholder="Describe your project..." 
+                                      id="id_description"
+                                      style="border: 2px solid #e5e7eb; padding: 12px 16px;"></textarea>
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_status" class="form-label">
+                                        <i class="fas fa-flag me-1"></i>Status
+                                    </label>
+                                    <select name="status" class="form-select" id="id_status" style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                        <option value="planning">Planning</option>
+                                        <option value="active">Active</option>
+                                        <option value="on_hold">On Hold</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_priority" class="form-label">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Priority
+                                    </label>
+                                    <select name="priority" class="form-select" id="id_priority" style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_start_date" class="form-label">
+                                        <i class="fas fa-calendar-plus me-1"></i>Start Date
+                                    </label>
+                                    <input type="date" 
+                                           name="start_date" 
+                                           class="form-control" 
+                                           id="id_start_date"
+                                           style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_end_date" class="form-label">
+                                        <i class="fas fa-calendar-check me-1"></i>End Date
+                                    </label>
+                                    <input type="date" 
+                                           name="end_date" 
+                                           class="form-control" 
+                                           id="id_end_date"
+                                           style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_budget" class="form-label">
+                                        <i class="fas fa-dollar-sign me-1"></i>Budget (Optional)
+                                    </label>
+                                    <input type="number" 
+                                           name="budget" 
+                                           class="form-control" 
+                                           step="0.01" 
+                                           placeholder="0.00" 
+                                           id="id_budget"
+                                           style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_progress" class="form-label">
+                                        <i class="fas fa-chart-line me-1"></i>Initial Progress
+                                    </label>
+                                    <input type="range" class="form-range mb-2" id="progressRangeCreate" 
+                                           min="0" max="100" step="1" value="0"
+                                           oninput="updateProgressValueCreate(this.value)">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <input type="number" class="form-control w-25" id="id_progress" name="progress" 
+                                               min="0" max="100" step="1" value="0"
+                                               oninput="updateProgressRangeCreate(this.value)"
+                                               style="border: 2px solid #e5e7eb; padding: 12px 16px;">
+                                        <div class="w-50 ms-3">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     id="progressBarCreate" style="width: 0%"
+                                                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    <span id="progressTextCreate">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'projects:project_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Project
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+/* Enhanced form styling */
+.form-control:focus, .form-select:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    outline: none;
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: #9ca3af;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.getElementById('projectForm');
+    form.addEventListener('submit', function(e) {
+        const name = document.getElementById('{{ form.name.id_for_label }}').value;
+        if (name.trim().length < 3) {
+            e.preventDefault();
+            notificationManager.show('Project name must be at least 3 characters long.', 'error');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+        submitBtn.disabled = true;
+    });
+    
+    // Auto-resize textarea
+    const textarea = document.querySelector('textarea');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+});
+
+// Progress synchronization functions for create page
+function updateProgressValueCreate(value) {
+    document.getElementById('id_progress').value = value;
+    updateProgressBarCreate(value);
+}
+
+function updateProgressRangeCreate(value) {
+    document.getElementById('progressRangeCreate').value = value;
+    updateProgressBarCreate(value);
+}
+
+function updateProgressBarCreate(value) {
+    const progressBar = document.getElementById('progressBarCreate');
+    const progressText = document.getElementById('progressTextCreate');
+    
+    progressBar.style.width = value + '%';
+    progressBar.setAttribute('aria-valuenow', value);
+    progressText.textContent = value + '%';
+    
+    // Change color based on progress
+    if (value < 25) {
+        progressBar.className = 'progress-bar bg-danger';
+    } else if (value < 50) {
+        progressBar.className = 'progress-bar bg-warning';
+    } else if (value < 75) {
+        progressBar.className = 'progress-bar bg-info';
+    } else {
+        progressBar.className = 'progress-bar bg-success';
+    }
+}
+</script>
+{% endblock %}

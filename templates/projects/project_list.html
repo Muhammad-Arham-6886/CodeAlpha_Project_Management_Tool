@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+
+{% block title %}My Projects - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-card {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: var(--transition);
+        overflow: hidden;
+        height: 100%;
+        position: relative;
+        border: none;
+    }
+    
+    .project-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+        transform: scaleX(0);
+        transition: var(--transition);
+    }
+    
+    .project-card:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .project-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .project-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .project-header::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 10px solid #667eea;
+        transform: translateX(-50%);
+    }
+    
+    .project-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .project-title {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+    
+    .project-description {
+        opacity: 0.9;
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .project-body {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .project-meta {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .project-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .project-progress {
+        margin-bottom: 1rem;
+    }
+    
+    .project-progress-bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .project-progress-fill {
+        height: 100%;
+        background: var(--success-gradient);
+        border-radius: 3px;
+        transition: width 0.6s ease;
+    }
+    
+    .project-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .project-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-planning {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    }
+    
+    .status-active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .status-on_hold {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .status-completed {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+    
+    .status-cancelled {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+    
+    .search-controls {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+    }
+    
+    .view-toggle {
+        display: flex;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 4px;
+    }
+    
+    .view-toggle button {
+        flex: 1;
+        border: none;
+        background: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: var(--transition);
+        color: #6b7280;
+    }
+    
+    .view-toggle button.active {
+        background: white;
+        color: #374151;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .project-date {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+{% csrf_token %}
+<!-- Header -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+    <h1 class="page-title">
+        <i class="fas fa-project-diagram me-2"></i>My Projects
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'projects:create_project' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Project
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Controls -->
+<div class="search-controls fade-in">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <form method="GET" class="d-flex gap-3">
+                <div class="flex-grow-1">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input class="form-control" type="search" name="search" 
+                               placeholder="Search projects by name or description..." 
+                               value="{{ request.GET.search }}" aria-label="Search">
+                    </div>
+                </div>
+                <select class="form-select" name="status" style="width: 150px;">
+                    <option value="">All Status</option>
+                    <option value="planning" {% if request.GET.status == 'planning' %}selected{% endif %}>Planning</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                </select>
+                <button class="btn btn-outline-primary" type="submit">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </form>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <div class="view-toggle">
+                <button type="button" class="active" id="grid-view" onclick="switchView('grid')">
+                    <i class="fas fa-th-large me-2"></i>Grid
+                </button>
+                <button type="button" id="list-view" onclick="switchView('list')">
+                    <i class="fas fa-list me-2"></i>List
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects Grid -->
+<div id="projects-grid" class="row">
+    {% for project in projects %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="project-card fade-in" style="animation-delay: {{ forloop.counter0|floatformat:1 }}s;">
+            <div class="project-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="project-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <span class="project-status status-{{ project.status }}">
+                        {{ project.get_status_display }}
+                    </span>
+                </div>
+                <h3 class="project-title">{{ project.name }}</h3>
+                <p class="project-description">{{ project.description|truncatechars:80 }}</p>
+            </div>
+            <div class="project-body">
+                <div class="project-date">
+                    <i class="fas fa-calendar me-1"></i>
+                    Created {{ project.created_at|date:"M d, Y" }}
+                </div>
+                
+                <div class="project-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ project.total_tasks }}</div>
+                        <div class="stat-label">Tasks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ project.completed_tasks }}</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ project.progress }}%</div>
+                        <div class="stat-label">Progress</div>
+                    </div>
+                </div>
+                
+                <div class="project-progress">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Progress</small>
+                        <small class="text-muted">
+                            {{ project.progress }}%
+                        </small>
+                    </div>
+                    <div class="project-progress-bar">
+                        <div class="project-progress-fill" 
+                             style="width: {{ project.progress }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="project-meta">
+                    <div class="project-actions">
+                        <a href="{% url 'projects:project_detail' project.id %}" 
+                           class="btn btn-sm btn-primary flex-fill">
+                            <i class="fas fa-eye me-1"></i>View
+                        </a>
+                        <a href="{% url 'projects:edit_project' project.id %}" 
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="confirmDelete('{{ project.id }}', '{{ project.name|escapejs }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state fade-in">
+            <div class="mb-4">
+                <i class="fas fa-project-diagram fa-4x mb-3" style="color: #d1d5db;"></i>
+            </div>
+            <h3 class="h4 mb-3">No Projects Found</h3>
+            {% if request.GET.search or request.GET.status %}
+                <p class="mb-4">No projects match your current filters. Try adjusting your search criteria.</p>
+                <a href="{% url 'projects:project_list' %}" class="btn btn-outline-secondary me-3">
+                    <i class="fas fa-times me-2"></i>Clear Filters
+                </a>
+            {% else %}
+                <p class="mb-4">Get started by creating your first project to organize your tasks and collaborate with your team.</p>
+            {% endif %}
+            <a href="{% url 'projects:create_project' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Your First Project
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Projects List View (Hidden by default) -->
+<div id="projects-list" class="d-none">
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Project</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Members</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 32px; height: 32px; background-color: {{ project.color|default:'#007bff' }}20; color: {{ project.color|default:'#007bff' }};">
+                                    <i class="fas fa-project-diagram"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ project.name }}</h6>
+                                    <small class="text-muted">{{ project.description|truncatechars:50 }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ project.status }}">{{ project.get_status_display }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-2" style="width: 100px; height: 6px;">
+                                    <div class="progress-bar" style="width: {{ project.progress }}%; background-color: {{ project.color|default:'#007bff' }};"></div>
+                                </div>
+                                <small>{{ project.completion_percentage }}%</small>
+                            </div>
+                        </td>
+                        <td>{{ project.total_members }}</td>
+                        <td>
+                            {% if project.end_date %}
+                                {{ project.end_date|date:"M d, Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-secondary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Projects pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// View switching functionality
+function switchView(view) {
+    const gridBtn = document.getElementById('grid-view');
+    const listBtn = document.getElementById('list-view');
+    const projectsContainer = document.getElementById('projects-grid');
+    
+    if (view === 'grid') {
+        gridBtn.classList.add('active');
+        listBtn.classList.remove('active');
+        projectsContainer.className = 'row';
+        
+        // Show grid layout
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.parentElement.className = 'col-lg-4 col-md-6 mb-4';
+        });
+    } else {
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        projectsContainer.className = 'row';
+        
+        // Show list layout
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.parentElement.className = 'col-12 mb-3';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'row';
+        });
+    }
+    
+    notificationManager.show(`Switched to ${view} view`, 'info', 2000);
+}
+
+// Project deletion confirmation with modern modal
+function confirmDelete(projectId, projectName) {
+    // Simple confirm dialog that works reliably
+    const confirmed = confirm(`⚠️ DELETE PROJECT\n\nAre you sure you want to delete "${projectName}"?\n\nThis will permanently delete:\n• All project tasks and data\n• Project member assignments\n• Activity history and notifications\n• All related files and attachments\n\nThis action cannot be undone!`);
+    
+    if (confirmed) {
+        // Create and submit form for proper Django CSRF handling
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/dashboard/${projectId}/delete/`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Add staggered animation to project cards
+    document.querySelectorAll('.project-card').forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // Add search functionality with debounce
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Auto-submit search after typing stops
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    this.form.submit();
+                }
+            }, 500);
+        });
+    }
+    
+    // Show welcome message
+    setTimeout(() => {
+        const projectCount = document.querySelectorAll('.project-card').length;
+        if (projectCount > 0) {
+            notificationManager.show(
+                `You have ${projectCount} project${projectCount !== 1 ? 's' : ''} in your workspace`,
+                'info',
+                4000
+            );
+        }
+    }, 1000);
+    
+    // Add hover effects to project cards
+    document.querySelectorAll('.project-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+});
+</script>
+{% endblock %}

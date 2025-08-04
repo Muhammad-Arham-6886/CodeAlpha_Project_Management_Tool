@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - Tasks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-header {
+        background: linear-gradient(135deg, {{ project.color|default:'#667eea' }} 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: var(--border-radius-lg);
+    }
+    
+    .kanban-board {
+        display: flex;
+        gap: 1.5rem;
+        min-height: 70vh;
+        overflow-x: auto;
+        padding-bottom: 2rem;
+    }
+    
+    .kanban-column {
+        flex: 1;
+        min-width: 320px;
+        background: #f8fafc;
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .kanban-column.todo {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-top: 4px solid #64748b;
+    }
+    
+    .kanban-column.in-progress {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-top: 4px solid #3b82f6;
+    }
+    
+    .kanban-column.review {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-top: 4px solid #f59e0b;
+    }
+    
+    .kanban-column.completed {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-top: 4px solid #10b981;
+    }
+    
+    .kanban-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .kanban-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        color: #1f2937;
+    }
+    
+    .task-count {
+        background: rgba(255, 255, 255, 0.9);
+        color: #374151;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        min-width: 24px;
+        text-align: center;
+    }
+    
+    .add-task-btn {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px dashed #d1d5db;
+        background: transparent;
+        border-radius: var(--border-radius);
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .add-task-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #f8fafc;
+    }
+    
+    .project-stats {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .stat-number {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- Project Header -->
+    <div class="project-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">{{ project.name }} - Tasks</h1>
+                    <p class="mb-0 opacity-75">{{ project.description|default:"Manage tasks for this project" }}</p>
+                    
+                    <div class="project-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ project_stats.total_tasks }}</span>
+                            <span class="stat-label">Total Tasks</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ project_stats.completed_tasks }}</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ project_stats.progress_percentage|floatformat:0 }}%</span>
+                            <span class="stat-label">Progress</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <a href="{% url 'tasks:create_task' %}?project={{ project.id }}" class="btn btn-light">
+                        <i class="fas fa-plus me-2"></i>Add Task
+                    </a>
+                    <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Project
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+        <!-- To Do Column -->
+        <div class="kanban-column todo" ondrop="drop(event)" ondragover="allowDrop(event)" data-status="todo">
+            <div class="kanban-header">
+                <h3 class="kanban-title">📋 To Do</h3>
+                <span class="task-count">{{ task_columns.todo.count }}</span>
+            </div>
+            <div class="task-list" id="todo-list">
+                {% for task in task_columns.todo %}
+                    {% include 'tasks/task_card.html' with task=task %}
+                {% empty %}
+                    <p class="text-muted text-center py-3">No tasks in this column</p>
+                {% endfor %}
+            </div>
+            <button class="add-task-btn" onclick="addTaskToColumn('todo')">
+                <i class="fas fa-plus me-2"></i>Add Task
+            </button>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="kanban-column in-progress" ondrop="drop(event)" ondragover="allowDrop(event)" data-status="in_progress">
+            <div class="kanban-header">
+                <h3 class="kanban-title">🚀 In Progress</h3>
+                <span class="task-count">{{ task_columns.in_progress.count }}</span>
+            </div>
+            <div class="task-list" id="in-progress-list">
+                {% for task in task_columns.in_progress %}
+                    {% include 'tasks/task_card.html' with task=task %}
+                {% empty %}
+                    <p class="text-muted text-center py-3">No tasks in this column</p>
+                {% endfor %}
+            </div>
+            <button class="add-task-btn" onclick="addTaskToColumn('in_progress')">
+                <i class="fas fa-plus me-2"></i>Add Task
+            </button>
+        </div>
+
+        <!-- Review Column -->
+        <div class="kanban-column review" ondrop="drop(event)" ondragover="allowDrop(event)" data-status="review">
+            <div class="kanban-header">
+                <h3 class="kanban-title">👀 Review</h3>
+                <span class="task-count">{{ task_columns.review.count }}</span>
+            </div>
+            <div class="task-list" id="review-list">
+                {% for task in task_columns.review %}
+                    {% include 'tasks/task_card.html' with task=task %}
+                {% empty %}
+                    <p class="text-muted text-center py-3">No tasks in this column</p>
+                {% endfor %}
+            </div>
+            <button class="add-task-btn" onclick="addTaskToColumn('review')">
+                <i class="fas fa-plus me-2"></i>Add Task
+            </button>
+        </div>
+
+        <!-- Completed Column -->
+        <div class="kanban-column completed" ondrop="drop(event)" ondragover="allowDrop(event)" data-status="completed">
+            <div class="kanban-header">
+                <h3 class="kanban-title">✅ Completed</h3>
+                <span class="task-count">{{ task_columns.completed.count }}</span>
+            </div>
+            <div class="task-list" id="completed-list">
+                {% for task in task_columns.completed %}
+                    {% include 'tasks/task_card.html' with task=task %}
+                {% empty %}
+                    <p class="text-muted text-center py-3">No completed tasks yet</p>
+                {% endfor %}
+            </div>
+            
+            <!-- No Add Task button for completed column -->
+            <div class="text-center py-3">
+                <small class="text-muted">Tasks move here when completed</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Task completion toggle
+function toggleTaskCompletion(taskId) {
+    fetch(`/tasks/${taskId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to update the UI
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task.');
+    });
+}
+
+// Status update function
+function updateTaskStatus(taskId, newStatus) {
+    fetch(`/tasks/${taskId}/status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to update the UI
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task status.');
+    });
+}
+
+// Add task to specific column
+function addTaskToColumn(status) {
+    window.location.href = `/tasks/create/?project={{ project.id }}&status=${status}`;
+}
+
+// Drag and drop functionality
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev, taskId) {
+    ev.dataTransfer.setData("text", taskId);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    const taskId = ev.dataTransfer.getData("text");
+    const newStatus = ev.currentTarget.getAttribute('data-status');
+    
+    if (taskId && newStatus) {
+        updateTaskStatus(taskId, newStatus);
+    }
+}
+</script>
+{% endblock %}

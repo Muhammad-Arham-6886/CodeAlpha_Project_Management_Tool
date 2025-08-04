@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        animation: fadeInUp 0.8s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .login-logo-icon {
+        transition: all 0.3s ease;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    .login-logo-icon:hover {
+        transform: rotate(360deg) scale(1.1);
+    }
+    
+    .card {
+        border: none;
+        border-radius: 15px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm mt-5 login-container">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <!-- Logo for login page -->
+                    <div class="d-flex align-items-center justify-content-center mb-3">
+                        <div class="logo-icon me-2 login-logo-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div>
+                            <h2 class="h4 mb-0 text-primary">ProjectFlow</h2>
+                            <small class="text-muted">MANAGEMENT SUITE</small>
+                        </div>
+                    </div>
+                    <p class="text-muted">Sign in to your account</p>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" name="username" id="id_username" 
+                                   placeholder="Enter your username" required
+                                   value="{{ form.username.value|default:'' }}">
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" name="password" id="id_password" 
+                                   placeholder="Enter your password" required>
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                        <label class="form-check-label" for="remember_me">
+                            Remember me
+                        </label>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p class="mb-2">
+                        <a href="#" class="text-decoration-none">Forgot your password?</a>
+                    </p>
+                    <p class="text-muted">
+                        Don't have an account? 
+                        <a href="{% url 'accounts:register' %}" class="text-decoration-none">Sign up</a>
+                    </p>
+                </div>
+
+                <!-- Demo credentials -->
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <strong>Demo Login:</strong><br>
+                        Username: <code>admin</code><br>
+                        Password: <code>admin123</code>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

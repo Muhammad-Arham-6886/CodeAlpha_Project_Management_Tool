@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - ProjectFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-bell me-2"></i>Notifications
+        </h2>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                <i class="fas fa-check-double me-2"></i>Mark All as Read
+            </button>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="row">
+        <div class="col-lg-8">
+            {% if notifications %}
+                <div class="notification-list">
+                    {% for notification in notifications %}
+                    <div class="notification-item {% if not notification.is_read %}unread{% endif %}" 
+                         data-id="{{ notification.id }}">
+                        <div class="notification-icon">
+                            {% if notification.type == 'task_assigned' %}
+                                <i class="fas fa-tasks text-primary"></i>
+                            {% elif notification.type == 'project_updated' %}
+                                <i class="fas fa-project-diagram text-info"></i>
+                            {% elif notification.type == 'deadline_reminder' %}
+                                <i class="fas fa-clock text-warning"></i>
+                            {% elif notification.type == 'task_completed' %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div class="notification-content">
+                            <h6 class="notification-title">{{ notification.title }}</h6>
+                            <p class="notification-message">{{ notification.message }}</p>
+                            <small class="notification-time text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ notification.created_at|timesince }} ago
+                            </small>
+                        </div>
+                        {% if not notification.is_read %}
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="markAsRead({{ notification.id }})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <i class="fas fa-bell fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No notifications yet</h4>
+                    <p class="text-muted">You'll see notifications about your projects and tasks here.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Notification Types
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="notification-filters">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="task_assigned" checked>
+                            <label class="form-check-label" for="task_assigned">
+                                <i class="fas fa-tasks text-primary me-2"></i>Task Assignments
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="project_updated" checked>
+                            <label class="form-check-label" for="project_updated">
+                                <i class="fas fa-project-diagram text-info me-2"></i>Project Updates
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="deadline_reminder" checked>
+                            <label class="form-check-label" for="deadline_reminder">
+                                <i class="fas fa-clock text-warning me-2"></i>Deadline Reminders
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="task_completed" checked>
+                            <label class="form-check-label" for="task_completed">
+                                <i class="fas fa-check-circle text-success me-2"></i>Task Completions
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notification-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.notification-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.notification-item.unread {
+    border-left: 4px solid var(--primary-color);
+    background: #f8f9ff;
+}
+
+.notification-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 50%;
+    margin-right: 1rem;
+}
+
+.notification-content {
+    flex-grow: 1;
+}
+
+.notification-title {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.notification-message {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+}
+
+.notification-time {
+    font-size: 0.875rem;
+}
+
+.notification-actions {
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.notification-filters .form-check-label {
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/notifications/mark-read/${notificationId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrftoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const item = document.querySelector(`[data-id="${notificationId}"]`);
+            item.classList.remove('unread');
+            item.querySelector('.notification-actions').remove();
+            notificationManager.show('Notification marked as read', 'success');
+        }
+    })
+    .catch(error => {
+        notificationManager.show('Error marking notification as read', 'error');
+    });
+}
+
+function markAllAsRead() {
+    const unreadItems = document.querySelectorAll('.notification-item.unread');
+    unreadItems.forEach(item => {
+        const id = item.dataset.id;
+        markAsRead(id);
+    });
+}
+
+// Filter notifications by type
+document.querySelectorAll('.notification-filters input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const type = this.id;
+        const items = document.querySelectorAll(`.notification-item`);
+        
+        items.forEach(item => {
+            const icon = item.querySelector('.notification-icon i');
+            let shouldShow = false;
+            
+            if (type === 'task_assigned' && icon.classList.contains('fa-tasks')) shouldShow = this.checked;
+            else if (type === 'project_updated' && icon.classList.contains('fa-project-diagram')) shouldShow = this.checked;
+            else if (type === 'deadline_reminder' && icon.classList.contains('fa-clock')) shouldShow = this.checked;
+            else if (type === 'task_completed' && icon.classList.contains('fa-check-circle')) shouldShow = this.checked;
+            else shouldShow = true; // Show other types always
+            
+            if (shouldShow) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

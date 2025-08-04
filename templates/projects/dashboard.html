@@ -1,0 +1,534 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - ProjectFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+        height: 100%;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100%;
+        opacity: 0;
+        transition: var(--transition);
+        z-index: 0;
+    }
+    
+    .metric-card:hover::before {
+        opacity: 0.05;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .metric-card > * {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.8rem;
+        color: white;
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+    }
+    
+    .metric-icon.projects {
+        background: var(--primary-gradient);
+    }
+    
+    .metric-icon.tasks {
+        background: var(--success-gradient);
+    }
+    
+    .metric-icon.completed {
+        background: var(--warning-gradient);
+    }
+    
+    .metric-icon.progress {
+        background: var(--secondary-gradient);
+    }
+    
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        display: block;
+        line-height: 1;
+    }
+    
+    .metric-label {
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.875rem;
+    }
+    
+    .welcome-banner {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius-lg);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .quick-action {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        transition: var(--transition);
+        text-decoration: none;
+        color: #374151;
+        box-shadow: var(--shadow-sm);
+        border: 2px solid transparent;
+    }
+    
+    .quick-action:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: #667eea;
+        color: #374151;
+        text-decoration: none;
+    }
+    
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: #667eea;
+    }
+    
+    .activity-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        transition: var(--transition);
+        position: relative;
+    }
+    
+    .activity-item:hover {
+        background: #f9fafb;
+        transform: translateX(8px);
+    }
+    
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--primary-gradient);
+        transform: scaleY(0);
+        transition: var(--transition);
+    }
+    
+    .activity-item:hover::before {
+        transform: scaleY(1);
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .quick-action {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        transition: var(--transition);
+        text-decoration: none;
+        color: #374151;
+        box-shadow: var(--shadow-sm);
+        border: 2px solid transparent;
+    }
+    
+    .quick-action:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: #667eea;
+        color: #374151;
+        text-decoration: none;
+    }
+    
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<!-- Modern Header -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+    <h1 class="page-title">
+        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'projects:create_project' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Project
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Welcome Banner -->
+<div class="welcome-banner slide-up">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center mb-3">
+                <div class="logo-icon me-3" style="background: rgba(255, 255, 255, 0.2); border-radius: 12px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <div>
+                    <h2 class="h3 mb-1">Welcome to ProjectFlow!</h2>
+                    <p class="mb-0 opacity-75">Manage your projects with style and efficiency</p>
+                </div>
+            </div>
+            <p class="mb-0">Transform your project management experience with our modern, intuitive platform.</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <div class="d-inline-flex align-items-center">
+                <div class="text-end me-3">
+                    <div class="h5 mb-0">{{ user.get_full_name|default:user.username }}</div>
+                    <small class="opacity-75">Project Manager</small>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="metric-card fade-in">
+            <div class="metric-icon projects">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <span class="metric-number">{{ total_projects|default:0 }}</span>
+            <div class="metric-label">Total Projects</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="metric-card fade-in" style="animation-delay: 0.1s;">
+            <div class="metric-icon tasks">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <span class="metric-number">{{ total_tasks|default:0 }}</span>
+            <div class="metric-label">Total Tasks</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="metric-card fade-in" style="animation-delay: 0.2s;">
+            <div class="metric-icon completed">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <span class="metric-number">{{ completed_tasks|default:0 }}</span>
+            <div class="metric-label">Completed</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="metric-card fade-in" style="animation-delay: 0.3s;">
+            <div class="metric-icon progress">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <span class="metric-number">{{ in_progress_tasks|default:0 }}</span>
+            <div class="metric-label">In Progress</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="h4 mb-3">Quick Actions</h3>
+        <div class="quick-actions">
+            <a href="{% url 'projects:create_project' %}" class="quick-action">
+                <i class="fas fa-plus-circle"></i>
+                <h6 class="mb-1">Create Project</h6>
+                <small class="text-muted">Start a new project</small>
+            </a>
+            <a href="{% url 'projects:project_list' %}" class="quick-action">
+                <i class="fas fa-folder-open"></i>
+                <h6 class="mb-1">View Projects</h6>
+                <small class="text-muted">Browse all projects</small>
+            </a>
+            <a href="{% url 'projects:project_list' %}" class="quick-action">
+                <i class="fas fa-tasks"></i>
+                <h6 class="mb-1">Manage Tasks</h6>
+                <small class="text-muted">View and edit tasks</small>
+            </a>
+            <a href="#" onclick="notificationManager.show('Feature coming soon!', 'info')" class="quick-action">
+                <i class="fas fa-chart-bar"></i>
+                <h6 class="mb-1">Reports</h6>
+                <small class="text-muted">View analytics</small>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="row">
+    <!-- Recent Projects -->
+    <div class="col-lg-8 mb-4">
+        <div class="card fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-project-diagram me-2 text-primary"></i>
+                    Recent Projects
+                </h5>
+                <a href="{% url 'projects:project_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_projects %}
+                    {% for project in recent_projects %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                        <i class="fas fa-project-diagram text-primary"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ project.name }}</h6>
+                                    <small class="text-muted">{{ project.description|truncatechars:60 }}</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="status-indicator {% if project.status == 'completed' %}completed{% elif project.status == 'in_progress' %}in-progress{% else %}todo{% endif %}">
+                                    {{ project.get_status_display }}
+                                </span>
+                                <div class="small text-muted">{{ project.created_at|date:"M d" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No projects yet. Create your first project to get started!</p>
+                        <a href="{% url 'projects:create_project' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Project
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activity Feed -->
+    <div class="col-lg-4 mb-4">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bell me-2 text-warning"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="activity-item">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                                <i class="fas fa-check text-success"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Task Completed</h6>
+                            <small class="text-muted">Design homepage layout</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                <i class="fas fa-plus text-primary"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">New Project Created</h6>
+                            <small class="text-muted">Website Redesign Project</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2">
+                                <i class="fas fa-clock text-warning"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Task Assigned</h6>
+                            <small class="text-muted">Review user feedback</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center p-3">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="notificationManager.show('Real-time activity feed coming soon!', 'info')">
+                        View All Activity
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Recent Tasks -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>My Recent Tasks
+                </h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_tasks %}
+                    {% for task in recent_tasks %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" {% if task.status == 'completed' %}checked{% endif %}>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1 {% if task.status == 'completed' %}text-decoration-line-through text-muted{% endif %}">
+                                {{ task.title }}
+                            </h6>
+                            <p class="text-muted small mb-1">{{ task.project.name }}</p>
+                            {% if task.due_date %}
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Due: {{ task.due_date|date:"M d, Y" }}
+                                    {% if task.is_overdue %}
+                                        <span class="text-danger ms-1">(Overdue)</span>
+                                    {% endif %}
+                                </small>
+                            {% endif %}
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-{{ task.priority|default:'secondary' }}">{{ task.get_priority_display }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No recent tasks</h5>
+                        <p class="text-muted">Start working on some tasks to see them here!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show welcome notification
+    setTimeout(() => {
+        notificationManager.show(
+            'Welcome to your ProjectFlow dashboard! All systems are ready to go.',
+            'success',
+            4000
+        );
+    }, 1500);
+    
+    // Animate metric numbers
+    function animateNumbers() {
+        const numbers = document.querySelectorAll('.metric-number');
+        numbers.forEach(num => {
+            const target = parseInt(num.textContent);
+            let current = 0;
+            const increment = target / 30;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                num.textContent = Math.floor(current);
+            }, 50);
+        });
+    }
+    
+    // Start number animation after cards are visible
+    setTimeout(animateNumbers, 800);
+    
+    // Add click handlers for demo purposes
+    document.querySelectorAll('.activity-item').forEach(item => {
+        item.addEventListener('click', function() {
+            this.style.background = '#f0f7ff';
+            setTimeout(() => {
+                this.style.background = '';
+            }, 1000);
+        });
+    });
+});
+</script>
+{% endblock %}

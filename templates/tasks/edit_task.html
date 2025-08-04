@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Task - {{ task.title }}{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-edit me-2"></i>Edit Task: {{ task.title }}
+                        </h4>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-{{ task.status|default:'secondary' }} px-3 py-2">
+                                {{ task.get_status_display }}
+                            </span>
+                            <span class="text-dark-50 small">Editing Mode</span>
+                        </div>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-dark" role="progressbar" style="width: 100%" 
+                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">Priority</label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                                        <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                        <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                                        <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>To Do</option>
+                                        <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                        <option value="review" {% if task.status == 'review' %}selected{% endif %}>Review</option>
+                                        <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>Completed</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="project" class="form-label">Project</label>
+                                    <select class="form-select" id="project" name="project" disabled>
+                                        <option value="{{ task.project.id }}" selected>{{ task.project.name }}</option>
+                                    </select>
+                                    <div class="form-text">Project cannot be changed after task creation</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="due_date" class="form-label">Due Date</label>
+                                    <input type="datetime-local" class="form-control" id="due_date" name="due_date" 
+                                           value="{{ task.due_date|date:'Y-m-d\TH:i' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" 
+                                      placeholder="Describe what needs to be done...">{{ task.description }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="assigned_to" class="form-label">Assigned To</label>
+                            <select class="form-select" id="assigned_to" name="assigned_to" multiple>
+                                {% for member in task.project.members.all %}
+                                    <option value="{{ member.id }}" 
+                                            {% if member in task.assigned_to.all %}selected{% endif %}>
+                                        {{ member.get_full_name|default:member.username }}
+                                    </option>
+                                {% endfor %}
+                                {% if task.project.owner not in task.project.members.all %}
+                                    <option value="{{ task.project.owner.id }}" 
+                                            {% if task.project.owner in task.assigned_to.all %}selected{% endif %}>
+                                        {{ task.project.owner.get_full_name|default:task.project.owner.username }} (Owner)
+                                    </option>
+                                {% endif %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple users</div>
+                        </div>
+
+                        {% if task.status == 'completed' and task.completed_date %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Task Completed:</strong> {{ task.completed_date|date:"M d, Y \a\t H:i" }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                                </a>
+                                {% if task.status != 'completed' %}
+                                    <button type="button" class="btn btn-success ms-2" onclick="toggleTaskCompletion('{{ task.id }}')">
+                                        <i class="fas fa-check me-2"></i>Mark as Completed
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-warning ms-2" onclick="toggleTaskCompletion('{{ task.id }}')">
+                                        <i class="fas fa-undo me-2"></i>Reopen Task
+                                    </button>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Task Information -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Task Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ task.created_at|date:"M d, Y \a\t H:i" }}</p>
+                            <p><strong>Created by:</strong> {{ task.created_by.get_full_name|default:task.created_by.username }}</p>
+                            <p><strong>Last updated:</strong> {{ task.updated_at|date:"M d, Y \a\t H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if task.estimated_hours %}
+                                <p><strong>Estimated Hours:</strong> {{ task.estimated_hours }}</p>
+                            {% endif %}
+                            {% if task.actual_hours %}
+                                <p><strong>Actual Hours:</strong> {{ task.actual_hours }}</p>
+                            {% endif %}
+                            {% if task.is_overdue %}
+                                <p class="text-danger"><strong>Status:</strong> Overdue</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Task completion toggle
+function toggleTaskCompletion(taskId) {
+    fetch(`/tasks/${taskId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh the page to update the UI
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the task.');
+    });
+}
+
+// Update status dropdown when completion status changes
+document.getElementById('status').addEventListener('change', function() {
+    const status = this.value;
+    const completionButton = document.querySelector('button[onclick*="toggleTaskCompletion"]');
+    
+    if (status === 'completed') {
+        completionButton.innerHTML = '<i class="fas fa-undo me-2"></i>Reopen Task';
+        completionButton.className = 'btn btn-warning ms-2';
+    } else {
+        completionButton.innerHTML = '<i class="fas fa-check me-2"></i>Mark as Completed';
+        completionButton.className = 'btn btn-success ms-2';
+    }
+});
+</script>
+{% endblock %}

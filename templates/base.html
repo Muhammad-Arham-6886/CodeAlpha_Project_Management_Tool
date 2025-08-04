@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ProjectFlow - Project Management Suite{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23667eea'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='white' font-size='40' font-family='Arial'%3E🚀%3C/text%3E%3C/svg%3E">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Modern Design System */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
+            --shadow-xl: 0 20px 25px rgba(0,0,0,0.1);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            transition: var(--transition);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #374151;
+        }
+        
+        /* Modern Sidebar */
+        .sidebar {
+            background: var(--dark-gradient);
+            min-height: 100vh;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+            padding: 20px 10px 20px 20px;
+        }
+        
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: var(--primary-gradient);
+            opacity: 0.1;
+            z-index: 0;
+        }
+        
+        .sidebar > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .sidebar .nav-link {
+            color: #e5e7eb;
+            padding: 14px 20px;
+            margin: 6px 16px;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: var(--transition);
+            z-index: -1;
+        }
+        
+        .sidebar .nav-link:hover::before {
+            opacity: 0.15;
+        }
+        
+        .sidebar .nav-link:hover {
+            color: #fff;
+            transform: translateX(8px);
+            border-left-color: #667eea;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .sidebar .nav-link.active {
+            background: var(--primary-gradient);
+            color: #fff;
+            border-left-color: #fff;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: var(--secondary-gradient);
+            color: white;
+            border-radius: 50%;
+            min-width: 22px;
+            height: 22px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Logo Styles */
+        .app-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .app-logo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .app-logo:hover::before {
+            left: 100%;
+        }
+        
+        .app-logo:hover {
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .logo-icon {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 18px;
+            position: relative;
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .logo-subtitle {
+            font-size: 11px;
+            opacity: 0.8;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Modern Cards and UI Elements */
+        .main-content {
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Heading Styles */
+        .sidebar-heading {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 1.5rem 0 1rem 0 !important;
+            padding: 0.5rem 1rem !important;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .sidebar-heading::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            bottom: -2px;
+            width: 30px;
+            height: 2px;
+            background: var(--primary-gradient);
+        }
+        
+        /* Main content area spacing */
+        main.col-md-9 {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        }
+        
+        /* Ensure consistent spacing on all screen sizes */
+        @media (min-width: 768px) {
+            main.col-md-9 {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+        }
+        
+        .card {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            background: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+        
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px 20px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        /* Modern Buttons */
+        .btn {
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            padding: 12px 20px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success {
+            background: var(--success-gradient);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning-gradient);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--secondary-gradient);
+            color: white;
+        }
+        
+        /* Typography */
+        .page-title {
+            color: #1f2937;
+            font-weight: 800;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+        
+        /* Form Controls */
+        .form-control {
+            border: 2px solid #e5e7eb;
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Top navbar logo for logged out users */
+        .top-navbar-logo {
+            display: flex;
+            align-items: center;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 20px;
+        }
+        
+        .top-navbar-logo:hover {
+            color: #5a67d8;
+            text-decoration: none;
+        }
+        
+        .top-navbar-logo .logo-icon {
+            background: #667eea;
+            color: white;
+            margin-right: 8px;
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+            animation: pulse 2s infinite;
+        }
+        
+        /* Notification System */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+        
+        .notification {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-xl);
+            margin-bottom: 12px;
+            transform: translateX(400px);
+            transition: var(--transition);
+            border-left: 4px solid var(--primary-gradient);
+            overflow: hidden;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            border-left-color: #10b981;
+        }
+        
+        .notification.warning {
+            border-left-color: #f59e0b;
+        }
+        
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+        
+        .notification-header {
+            padding: 16px 20px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .notification-body {
+            padding: 0 20px 16px;
+            color: #6b7280;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0;
+            font-size: 18px;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: #374151;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-indicator.todo {
+            background: rgba(107, 114, 128, 0.1);
+            color: #374151;
+        }
+        
+        .status-indicator.in-progress {
+            background: rgba(59, 130, 246, 0.1);
+            color: #1d4ed8;
+        }
+        
+        .status-indicator.completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+        }
+        
+        /* Enhanced Status Badges - Project Status */
+        .badge.bg-planning {
+            background-color: #6366f1 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-active {
+            background-color: #10b981 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-on_hold {
+            background-color: #f59e0b !important;
+            color: white !important;
+        }
+        
+        .badge.bg-completed {
+            background-color: #8b5cf6 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-cancelled {
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+        
+        /* Priority Badges */
+        .badge.bg-low {
+            background-color: #10b981 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-medium {
+            background-color: #f59e0b !important;
+            color: white !important;
+        }
+        
+        .badge.bg-high {
+            background-color: #f97316 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-critical {
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+        
+        /* Role Badges */
+        .badge.bg-admin {
+            background-color: #e11d48 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-manager {
+            background-color: #7c3aed !important;
+            color: white !important;
+        }
+        
+        .badge.bg-member {
+            background-color: #6b7280 !important;
+            color: white !important;
+        }
+        
+        .badge.bg-viewer {
+            background-color: #06b6d4 !important;
+            color: white !important;
+        }
+        
+        /* Glassmorphism Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        /* Progress Bars */
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            background: var(--primary-gradient);
+            transition: width 0.6s ease;
+            border-radius: 4px;
+        }
+        
+        /* Micro Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+            height: 32px;
+            font-size: 14px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h5>Loading...</h5>
+            <p class="text-muted">Please wait while we prepare your workspace</p>
+        </div>
+    </div>
+    
+    <!-- Notification Container -->
+    <div id="notification-container" class="notification-container"></div>
+    <!-- Messages -->
+    {% if messages %}
+        <div class="container-fluid">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <!-- Authenticated user layout with sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky" style="padding-top: 20px;">
+                    <!-- App Logo -->
+                    <a href="{% url 'projects:dashboard' %}" class="app-logo" style="margin: 0 0 1.5rem 0;">
+                        <div class="logo-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div class="logo-text">
+                            <div class="logo-title">ProjectFlow</div>
+                            <div class="logo-subtitle">MANAGEMENT SUITE</div>
+                        </div>
+                    </a>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'projects:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}" href="{% url 'projects:project_list' %}">
+                                <i class="fas fa-project-diagram me-2"></i>
+                                My Projects
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}" href="{% url 'tasks:task_list' %}">
+                                <i class="fas fa-tasks me-2"></i>
+                                My Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link position-relative {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}" href="#" onclick="toggleNotificationPanel()">
+                                <i class="fas fa-bell me-2"></i>
+                                Notifications
+                                {% if unread_notifications_count > 0 %}
+                                    <span class="notification-badge">{{ unread_notifications_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'reports' in request.path %}active{% endif %}" href="{% url 'reports:dashboard' %}">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Reports
+                            </a>
+                        </li>
+                        </li>
+                    </ul>
+
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1">
+                        <span>Quick Actions</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'projects:create_project' %}">
+                                <i class="fas fa-plus me-2"></i>
+                                New Project
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showInviteInfo()">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Invite Team
+                            </a>
+                        </li>
+                    </ul>
+
+                    <hr>
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle px-3" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <strong>{{ user.get_full_name|default:user.username }}</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a></li>
+                            <li><a class="dropdown-item" href="#">Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Sign out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10">
+                <div style="padding: 20px;">
+                    {% block main_content %}{% endblock %}
+                </div>
+                
+                <!-- Modern Footer -->
+                <footer class="footer mt-5 py-4" style="background: var(--dark-gradient); color: white; border-radius: var(--border-radius-lg); margin: 0 20px 20px;">
+                    <div class="container-fluid px-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="logo-icon me-3" style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                                        <i class="fas fa-rocket"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">ProjectFlow</div>
+                                        <small class="opacity-75">Professional Project Management Suite</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <small class="opacity-75">
+                                    © 2025 ProjectFlow. Built with ❤️ using Django & Bootstrap 5
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </main>
+        </div>
+    </div>
+    {% else %}
+    <!-- Non-authenticated user layout (login/register pages) -->
+    <div class="container-fluid">
+        {% block content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <!-- Bootstrap 5 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Page Loading Animation -->
+    <div id="page-loader" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease;
+    ">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="logo-icon mx-auto mb-2" style="
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                animation: pulse 1.5s infinite;
+            ">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <h4>ProjectFlow</h4>
+            <p class="mb-0">Loading your workspace...</p>
+        </div>
+    </div>
+
+    <script>
+        // Modern Notification System
+        class NotificationManager {
+            constructor() {
+                this.container = document.getElementById('notification-container');
+            }
+            
+            show(message, type = 'info', duration = 5000) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                
+                const id = Date.now();
+                notification.innerHTML = `
+                    <div class="notification-header">
+                        <h6 class="mb-0 fw-bold">${this.getTypeTitle(type)}</h6>
+                        <button class="notification-close" onclick="notificationManager.hide(${id})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="notification-body">${message}</div>
+                `;
+                
+                notification.id = `notification-${id}`;
+                this.container.appendChild(notification);
+                
+                // Trigger animation
+                setTimeout(() => notification.classList.add('show'), 100);
+                
+                // Auto remove
+                if (duration > 0) {
+                    setTimeout(() => this.hide(id), duration);
+                }
+                
+                return id;
+            }
+            
+            hide(id) {
+                const notification = document.getElementById(`notification-${id}`);
+                if (notification) {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }
+            
+            getTypeTitle(type) {
+                const titles = {
+                    success: 'Success',
+                    warning: 'Warning',
+                    error: 'Error',
+                    info: 'Information'
+                };
+                return titles[type] || 'Notification';
+            }
+        }
+        
+        // Loading Manager
+        class LoadingManager {
+            constructor() {
+                this.overlay = document.getElementById('loading-overlay');
+            }
+            
+            show(message = 'Loading...') {
+                if (this.overlay) {
+                    this.overlay.querySelector('h5').textContent = message;
+                    this.overlay.classList.add('active');
+                }
+            }
+            
+            hide() {
+                if (this.overlay) {
+                    this.overlay.classList.remove('active');
+                }
+            }
+        }
+        
+        // Initialize managers
+        const notificationManager = new NotificationManager();
+        const loadingManager = new LoadingManager();
+        
+        // Hide page loader when everything is loaded
+        window.addEventListener('load', function() {
+            const pageLoader = document.getElementById('page-loader');
+            if (pageLoader) {
+                setTimeout(() => {
+                    pageLoader.style.opacity = '0';
+                    setTimeout(() => {
+                        pageLoader.style.display = 'none';
+                    }, 500);
+                }, 1000);
+            }
+        });
+        
+        // Add fade-in animation to cards when they come into view
+        function animateOnScroll() {
+            const cards = document.querySelectorAll('.card:not(.animated)');
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    card.classList.add('animated', 'fade-in');
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', animateOnScroll);
+        window.addEventListener('load', animateOnScroll);
+        
+        // Enhanced AJAX with loading states
+        function makeRequest(url, options = {}) {
+            loadingManager.show();
+            
+            return fetch(url, {
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            })
+            .then(response => {
+                loadingManager.hide();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                loadingManager.hide();
+                notificationManager.show(
+                    'An error occurred. Please try again.',
+                    'error'
+                );
+                throw error;
+            });
+        }
+        
+        // Show invite team information
+        function showInviteInfo() {
+            notificationManager.show(
+                'To invite team members, go to a specific project and use the "Invite Team" button.',
+                'info',
+                4000
+            );
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

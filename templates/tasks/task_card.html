@@ -1,0 +1,76 @@
+<!-- Task Card Component -->
+<div class="task-card priority-{{ task.priority }} {% if task.status == 'completed' %}completed{% endif %}" 
+     draggable="true" 
+     ondragstart="drag(event, '{{ task.id }}')"
+     onclick="window.location.href='{% url 'tasks:task_detail' task.id %}'">
+    
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="task-title">{{ task.title }}</div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="priority-badge priority-{{ task.priority }}">{{ task.get_priority_display }}</span>
+            <button class="completion-toggle {% if task.status == 'completed' %}completed{% endif %}" 
+                    onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                    title="{% if task.status == 'completed' %}Reopen task{% else %}Mark as completed{% endif %}">
+            </button>
+        </div>
+    </div>
+    
+    {% if task.description %}
+        <div class="task-description text-muted small mb-2">
+            {{ task.description|truncatechars:100 }}
+        </div>
+    {% endif %}
+    
+    <div class="task-meta">
+        <div class="d-flex align-items-center gap-2">
+            {% if task.assigned_to.exists %}
+                <div class="task-assignee">
+                    <i class="fas fa-user text-muted"></i>
+                    <span>{{ task.assignee_names|truncatechars:20 }}</span>
+                </div>
+            {% endif %}
+            
+            {% if task.due_date %}
+                <div class="task-due text-muted small">
+                    <i class="fas fa-calendar text-muted"></i>
+                    <span {% if task.is_overdue %}class="text-danger"{% endif %}>
+                        {{ task.due_date|date:"M d" }}
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="task-actions">
+            <button class="task-action-btn" 
+                    onclick="event.stopPropagation(); window.location.href='{% url 'tasks:edit_task' task.id %}'"
+                    title="Edit task">
+                <i class="fas fa-edit"></i>
+            </button>
+            
+            {% if task.status != 'completed' %}
+                <button class="task-action-btn"
+                        onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                        title="Mark as completed">
+                    <i class="fas fa-check"></i>
+                </button>
+            {% else %}
+                <button class="task-action-btn"
+                        onclick="event.stopPropagation(); toggleTaskCompletion('{{ task.id }}')"
+                        title="Reopen task">
+                    <i class="fas fa-undo"></i>
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="task-project small text-muted mt-2">
+        <i class="fas fa-folder text-muted"></i>
+        {{ task.project.name }}
+        {% if task.completed_date %}
+            <span class="ms-2">
+                <i class="fas fa-check-circle text-success"></i>
+                Completed {{ task.completed_date|date:"M d, H:i" }}
+            </span>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,581 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ project.name }} - Project Board{% endblock %}
+
+{% block extra_css %}
+<style>
+    .board-container {
+        min-height: 600px;
+        padding: 1rem 0;
+    }
+    
+    .board-column {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1rem;
+        min-height: 500px;
+        margin-bottom: 1rem;
+        border: 2px dashed transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .board-column.drag-over {
+        border-color: var(--primary-color);
+        background: #f0f9ff;
+    }
+    
+    .column-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .column-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    
+    .task-count {
+        background: var(--primary-color);
+        color: white;
+        border-radius: 12px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #e5e7eb;
+        cursor: grab;
+        transition: all 0.3s ease;
+    }
+    
+    .task-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+    }
+    
+    .task-card:active {
+        cursor: grabbing;
+    }
+    
+    .task-card.dragging {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+    
+    .task-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+    
+    .task-description {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+    
+    .task-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+    
+    .task-assignee {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.625rem;
+    }
+    
+    .priority-badge {
+        padding: 0.125rem 0.375rem;
+        border-radius: 4px;
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .priority-high {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .priority-medium {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .priority-low {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+    
+    .add-task-btn {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px dashed #d1d5db;
+        background: transparent;
+        border-radius: 8px;
+        color: #6b7280;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .add-task-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background: #f0f9ff;
+    }
+    
+    .board-filters {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-sm);
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'projects:project_detail' project.id %}">{{ project.name }}</a></li>
+                    <li class="breadcrumb-item active">Board</li>
+                </ol>
+            </nav>
+            <h1 class="page-title">
+                <i class="fas fa-tasks me-2"></i>{{ project.name }} Board
+            </h1>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Project
+                </a>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                    <i class="fas fa-plus me-2"></i>Add Task
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="board-filters">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex gap-3">
+                    <select class="form-select form-select-sm" id="assigneeFilter">
+                        <option value="">All Assignees</option>
+                        {% for member in project_members %}
+                        <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="form-select form-select-sm" id="priorityFilter">
+                        <option value="">All Priorities</option>
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" id="boardView">
+                        <i class="fas fa-columns me-1"></i>Board
+                    </button>
+                    <button class="btn btn-outline-secondary" id="listView">
+                        <i class="fas fa-list me-1"></i>List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kanban Board -->
+    <div class="board-container" id="kanbanBoard">
+        <div class="row g-3">
+            <!-- To Do Column -->
+            <div class="col-lg-3 col-md-6">
+                <div class="board-column" data-status="todo" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="column-header">
+                        <h5 class="column-title text-secondary">
+                            <i class="fas fa-circle me-2"></i>To Do
+                        </h5>
+                        <span class="task-count">3</span>
+                    </div>
+                    
+                    <!-- Sample Tasks -->
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="1">
+                        <div class="task-title">Design Landing Page</div>
+                        <div class="task-description">Create a modern, responsive landing page for the project.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">JD</div>
+                                <span>John Doe</span>
+                            </div>
+                            <span class="priority-badge priority-high">High</span>
+                        </div>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="2">
+                        <div class="task-title">User Authentication</div>
+                        <div class="task-description">Implement user login and registration functionality.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">AS</div>
+                                <span>Alice Smith</span>
+                            </div>
+                            <span class="priority-badge priority-medium">Medium</span>
+                        </div>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="3">
+                        <div class="task-title">Database Schema</div>
+                        <div class="task-description">Design and implement the database schema.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">BJ</div>
+                                <span>Bob Johnson</span>
+                            </div>
+                            <span class="priority-badge priority-low">Low</span>
+                        </div>
+                    </div>
+                    
+                    <button class="add-task-btn" onclick="showAddTaskModal('todo')">
+                        <i class="fas fa-plus me-2"></i>Add a task
+                    </button>
+                </div>
+            </div>
+            
+            <!-- In Progress Column -->
+            <div class="col-lg-3 col-md-6">
+                <div class="board-column" data-status="in_progress" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="column-header">
+                        <h5 class="column-title text-warning">
+                            <i class="fas fa-circle me-2"></i>In Progress
+                        </h5>
+                        <span class="task-count">2</span>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="4">
+                        <div class="task-title">API Development</div>
+                        <div class="task-description">Build REST API endpoints for the application.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">CS</div>
+                                <span>Carol Smith</span>
+                            </div>
+                            <span class="priority-badge priority-high">High</span>
+                        </div>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="5">
+                        <div class="task-title">Frontend Components</div>
+                        <div class="task-description">Create reusable UI components.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">DW</div>
+                                <span>David Wilson</span>
+                            </div>
+                            <span class="priority-badge priority-medium">Medium</span>
+                        </div>
+                    </div>
+                    
+                    <button class="add-task-btn" onclick="showAddTaskModal('in_progress')">
+                        <i class="fas fa-plus me-2"></i>Add a task
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Review Column -->
+            <div class="col-lg-3 col-md-6">
+                <div class="board-column" data-status="review" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="column-header">
+                        <h5 class="column-title text-info">
+                            <i class="fas fa-circle me-2"></i>Review
+                        </h5>
+                        <span class="task-count">1</span>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="6">
+                        <div class="task-title">Code Review</div>
+                        <div class="task-description">Review and test the authentication module.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">EM</div>
+                                <span>Emma Miller</span>
+                            </div>
+                            <span class="priority-badge priority-medium">Medium</span>
+                        </div>
+                    </div>
+                    
+                    <button class="add-task-btn" onclick="showAddTaskModal('review')">
+                        <i class="fas fa-plus me-2"></i>Add a task
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Done Column -->
+            <div class="col-lg-3 col-md-6">
+                <div class="board-column" data-status="done" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="column-header">
+                        <h5 class="column-title text-success">
+                            <i class="fas fa-circle me-2"></i>Done
+                        </h5>
+                        <span class="task-count">2</span>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="7">
+                        <div class="task-title">Project Setup</div>
+                        <div class="task-description">Initialize project structure and dependencies.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">FT</div>
+                                <span>Frank Taylor</span>
+                            </div>
+                            <span class="priority-badge priority-high">High</span>
+                        </div>
+                    </div>
+                    
+                    <div class="task-card" draggable="true" ondragstart="drag(event)" data-task-id="8">
+                        <div class="task-title">Environment Setup</div>
+                        <div class="task-description">Configure development and production environments.</div>
+                        <div class="task-meta">
+                            <div class="task-assignee">
+                                <div class="assignee-avatar">GT</div>
+                                <span>Grace Thomas</span>
+                            </div>
+                            <span class="priority-badge priority-low">Low</span>
+                        </div>
+                    </div>
+                    
+                    <button class="add-task-btn" onclick="showAddTaskModal('done')">
+                        <i class="fas fa-plus me-2"></i>Add a task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTaskForm">
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">Task Title</label>
+                        <input type="text" class="form-control" id="taskTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="taskDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="taskStatus" class="form-label">Status</label>
+                            <select class="form-select" id="taskStatus" required>
+                                <option value="todo">To Do</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="review">Review</option>
+                                <option value="done">Done</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taskPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="taskPriority" required>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskAssignee" class="form-label">Assignee</label>
+                        <select class="form-select" id="taskAssignee">
+                            <option value="">Unassigned</option>
+                            {% for member in project_members %}
+                            <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addTask()">Add Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Drag and Drop functionality
+let draggedElement = null;
+
+function allowDrop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.add('drag-over');
+}
+
+function drag(ev) {
+    draggedElement = ev.target;
+    ev.target.classList.add('dragging');
+    ev.dataTransfer.setData("text", ev.target.dataset.taskId);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('drag-over');
+    
+    if (draggedElement) {
+        const column = ev.currentTarget;
+        const newStatus = column.dataset.status;
+        
+        // Add the task to the new column
+        const addButton = column.querySelector('.add-task-btn');
+        column.insertBefore(draggedElement, addButton);
+        
+        draggedElement.classList.remove('dragging');
+        
+        // Update task counts
+        updateTaskCounts();
+        
+        // Here you would make an AJAX call to update the task status
+        const taskId = draggedElement.dataset.taskId;
+        updateTaskStatus(taskId, newStatus);
+        
+        draggedElement = null;
+    }
+}
+
+function updateTaskCounts() {
+    document.querySelectorAll('.board-column').forEach(column => {
+        const taskCount = column.querySelectorAll('.task-card').length;
+        const countBadge = column.querySelector('.task-count');
+        countBadge.textContent = taskCount;
+    });
+}
+
+function updateTaskStatus(taskId, newStatus) {
+    // This would make an AJAX call to update the task status in the backend
+    console.log(`Updating task ${taskId} to status: ${newStatus}`);
+    // Implementation coming soon...
+}
+
+function showAddTaskModal(status) {
+    document.getElementById('taskStatus').value = status;
+    new bootstrap.Modal(document.getElementById('addTaskModal')).show();
+}
+
+function addTask() {
+    const title = document.getElementById('taskTitle').value;
+    const description = document.getElementById('taskDescription').value;
+    const status = document.getElementById('taskStatus').value;
+    const priority = document.getElementById('taskPriority').value;
+    const assigneeId = document.getElementById('taskAssignee').value;
+    
+    if (!title.trim()) {
+        alert('Please enter a task title');
+        return;
+    }
+    
+    // This would make an AJAX call to create the task
+    console.log('Creating task:', { title, description, status, priority, assigneeId });
+    alert('Add task functionality - Coming Soon!');
+    
+    // Reset form and close modal
+    document.getElementById('addTaskForm').reset();
+    bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
+}
+
+// Filter functionality
+document.getElementById('assigneeFilter').addEventListener('change', function() {
+    filterTasks();
+});
+
+document.getElementById('priorityFilter').addEventListener('change', function() {
+    filterTasks();
+});
+
+function filterTasks() {
+    const assigneeFilter = document.getElementById('assigneeFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    
+    document.querySelectorAll('.task-card').forEach(card => {
+        let show = true;
+        
+        if (assigneeFilter && !card.textContent.includes(assigneeFilter)) {
+            show = false;
+        }
+        
+        if (priorityFilter && !card.querySelector(`.priority-${priorityFilter}`)) {
+            show = false;
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+    });
+}
+
+// View toggle functionality
+document.getElementById('listView').addEventListener('click', function() {
+    alert('List view functionality - Coming Soon!');
+});
+
+// Remove drag-over class when dragging ends
+document.addEventListener('dragend', function() {
+    document.querySelectorAll('.board-column').forEach(column => {
+        column.classList.remove('drag-over');
+    });
+    document.querySelectorAll('.task-card').forEach(card => {
+        card.classList.remove('dragging');
+    });
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    updateTaskCounts();
+    console.log('Project board loaded');
+});
+</script>
+{% endblock %}
